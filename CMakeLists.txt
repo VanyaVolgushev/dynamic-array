@@ -15,11 +15,13 @@ FetchContent_MakeAvailable(googletest)
 
 enable_testing()
 
-file(GLOB SRC_FILES src/*.cpp src/*.h)
+file(GLOB HEADER_FILES src/*.h)
 file(GLOB TEST_FILES tests/*.cpp)
 
-add_library(my_dynamic_array_lib ${SRC_FILES})
-target_include_directories(my_dynamic_array_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+add_library(my_dynamic_array_lib INTERFACE)
+target_include_directories(my_dynamic_array_lib INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+target_sources(my_dynamic_array_lib INTERFACE ${HEADER_FILES})
 
 add_executable(run_tests ${TEST_FILES})
 target_link_libraries(run_tests PRIVATE my_dynamic_array_lib gtest_main)

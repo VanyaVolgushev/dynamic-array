@@ -11,8 +11,8 @@ public:
     MyDynamicArray(size_t capacity);
     ~MyDynamicArray();
 
-    int insert(T const& value);
-    int insert(size_t index, T const& value);
+    size_t insert(T const& value);
+    size_t insert(size_t index, T const& value);
     void remove(size_t index);
 
     T& operator[] (size_t index);
@@ -97,42 +97,40 @@ template<typename T>
 MyDynamicArray<T>::MyDynamicArray(size_t capactiy) {
     _capacity = capactiy;
     _size = 0;
-    _data = malloc(sizeof(T) * _capacity);
+    _data = static_cast<T*>(malloc(sizeof(T) * _capacity));
 }
 
 template<typename T>
 MyDynamicArray<T>::~MyDynamicArray() {
-    if(std::is_destructible<T>::value && !std::is_trivially_destructible<T>::value) {
-        for (size_t i = 0; i < size; i++)
-        {
-            _data[i].~T();
-        }
+    for (size_t i = 0; i < _size; i++)
+    {
+        _data[i].~T();
     }
     free(_data);
 }
 
 template <typename T>
-int MyDynamicArray<T>::insert(T const &value)
+size_t MyDynamicArray<T>::insert(T const &value)
 {
     if (_size >= _capacity) {
         upsize();
     }
-    _data[_size] = value;
+    new (&_data[_size]) T(value);
     _size++;
     return _size;
 }
 
 template <typename T>
-int MyDynamicArray<T>::insert(size_t index, T const &value)
+size_t MyDynamicArray<T>::insert(size_t index, T const &value)
 {
     assert(index <= _size);
     if (_size >= _capacity) {
         upsize();
     }
     for (size_t i = _size; i > index; i--) {
-        _data[i] = std::move(_data[i - 1]);
+        new (&new_data[i]) T(std::move(_data[i - 1]));
     }
-    _data[index] = value;
+    new (&_data[index]) T(value);
     _size++;
     return index;
 }
@@ -145,8 +143,9 @@ void MyDynamicArray<T>::remove(size_t index)
         _data[index].~T();
     }
     for (size_t i = index; i < _size - 1; i++) {
-        _data[i] = std::move(_data[i + 1]);
+        new (&_data[i]) T(std::move(_data[i - 1]));
     }
+    _size--;
 }
 
 template <typename T>
@@ -178,7 +177,7 @@ void MyDynamicArray<T>::upsize() {
     size_t new_capacity = _capacity * RESIZE_FACTOR;
     T* new_data = (T*)malloc(sizeof(T) * new_capacity);
     for (size_t i = 0; i < _size; i++) {
-        new_data[i] = std::move(_data[i]);
+        new (&new_data[i]) T(std::move(_data[i]));
     }
     free(_data);
     _data = new_data;
