@@ -21,61 +21,48 @@ public:
     size_t size() const;
     size_t capacity() const;
     
-    //class Iterator : public std::iterator<std::bidirectional_iterator_tag, int> {
-    //    public:
-    //        Iterator(int i = 0) : val(i) {
-    //            if(val<0 || val>5) throw;
-    //        }
-
-    //        bool operator==(Iterator const& rhs) const {
-    //            return (val==rhs.val);
-    //        }
-
-    //        bool operator!=(Iterator const& rhs) const {
-    //            return !(*this==rhs);
-    //        }
-
-    //        Iterator& operator++() {
-    //            if(val!=6)
-    //                ++val;
-    //            return *this;
-    //        }
-
-    //        Iterator operator++(int) {
-    //            Iterator tmp (*this);
-    //            ++(*this);
-    //            return tmp;
-    //        }
-
-    //        Iterator& operator--() {
-    //            if(val!=-1)
-    //                --val;
-    //            return *this;
-    //        }
-
-    //        Iterator operator--(int) {
-    //            Iterator tmp (*this);
-    //            --(*this);
-    //            return tmp;
-    //        }
-
-    //        int operator* () const {
-    //            if(val==-1 || val==6) throw;
-    //            return val;
-    //        }
-
-    //    private:
-    //        int val;
-    //};
-
-    //Iterator begin() {
-    //    return Iterator();
-    //}
-
-    //Iterator end() {
-    //    return ++Iterator(5);
-    //}
-
+class Iterator {
+    public:
+        using iterator_category = std::bidirectional_iterator_tag;
+        using value_type        = T;
+        using difference_type   = std::ptrdiff_t;
+        using pointer           = T*;
+        using reference         = T&;
+    
+        Iterator(size_t i = 0, T* p = nullptr) : offset(i), p(p) {}
+    
+        bool operator==(Iterator const& rhs) const {
+            return p == rhs.p && offset == rhs.offset;
+        }
+    
+        bool operator!=(Iterator const& rhs) const {
+            return !(*this == rhs);
+        }
+    
+        Iterator& operator++() { ++offset; return *this; }
+        Iterator  operator++(int) { Iterator tmp(*this); ++(*this); return tmp; }
+    
+        Iterator& operator--() { --offset; return *this; }
+        Iterator  operator--(int) { Iterator tmp(*this); --(*this); return tmp; }
+    
+        // return a reference so iterator behaves like a normal container iterator
+        reference operator*() const { return *(p + offset); }
+        pointer   operator->() const { return p + offset; }
+    
+    private:
+        T*     p;
+        size_t offset;
+    };
+    
+    // add typedef for reverse iterator and the rbegin/rend functions
+    using reverse_iterator = std::reverse_iterator<Iterator>;
+    
+    Iterator begin() { return Iterator(0, _data); }
+    Iterator end()   { return Iterator(_size, _data); }
+    
+    reverse_iterator rbegin() { return reverse_iterator(end()); }
+    reverse_iterator rend()   { return reverse_iterator(begin()); }
+    
 private:
     static constexpr size_t DEFAULT_CAPACITY = 16;
     static constexpr float RESIZE_FACTOR = 2.0f;
@@ -128,7 +115,7 @@ size_t MyDynamicArray<T>::insert(size_t index, T const &value)
         upsize();
     }
     for (size_t i = _size; i > index; i--) {
-        new (&new_data[i]) T(std::move(_data[i - 1]));
+        new (&_data[i]) T(std::move(_data[i - 1]));
     }
     new (&_data[index]) T(value);
     _size++;
@@ -143,7 +130,7 @@ void MyDynamicArray<T>::remove(size_t index)
         _data[index].~T();
     }
     for (size_t i = index; i < _size - 1; i++) {
-        new (&_data[i]) T(std::move(_data[i - 1]));
+        new (&_data[i]) T(std::move(_data[i + 1]));
     }
     _size--;
 }
