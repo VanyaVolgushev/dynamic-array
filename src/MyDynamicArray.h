@@ -5,6 +5,7 @@
 #include <iterator>
 #include <cstdlib>
 #include <utility>
+#include <algorithm>
 
 template<typename T>
 class MyDynamicArray final {
@@ -15,6 +16,8 @@ public:
 
     MyDynamicArray(MyDynamicArray const& other);
     MyDynamicArray(MyDynamicArray&& other) noexcept;
+
+    MyDynamicArray& operator=(MyDynamicArray other);
 
     size_t insert(T const& value);
     size_t insert(size_t index, T const& value);
@@ -74,6 +77,7 @@ private:
     T* _data;
 
     void upsize();
+    void swap(MyDynamicArray& other) noexcept;
 };
 
 // ------------------------------------------------------------------------
@@ -126,6 +130,20 @@ MyDynamicArray<T>::MyDynamicArray(MyDynamicArray&& other) noexcept {
     other._data = nullptr;
 }
 
+template<typename T>
+MyDynamicArray<T>& MyDynamicArray<T>::operator=(MyDynamicArray other) {
+    swap(other);
+    return *this;
+}
+
+template<typename T>
+void MyDynamicArray<T>::swap(MyDynamicArray& other) noexcept {
+    using std::swap;
+    swap(_capacity, other._capacity);
+    swap(_size, other._size);
+    swap(_data, other._data);
+}
+
 template <typename T>
 size_t MyDynamicArray<T>::insert(T const &value)
 {
@@ -144,8 +162,9 @@ size_t MyDynamicArray<T>::insert(size_t index, T const &value)
     if (_size >= _capacity) {
         upsize();
     }
-    for (size_t i = _size; i > index; i--) {
+    for (size_t i = _size; i > index; --i) {
         new (&_data[i]) T(std::move(_data[i - 1]));
+        _data[i - 1].~T();
     }
     new (&_data[index]) T(value);
     _size++;
@@ -156,11 +175,10 @@ template <typename T>
 void MyDynamicArray<T>::remove(size_t index)
 {
     assert(index < _size);
-    if (std::is_destructible<T>::value && !std::is_trivially_destructible<T>::value) {
-        _data[index].~T();
-    }
-    for (size_t i = index; i < _size - 1; i++) {
+    _data[index].~T();
+    for (size_t i = index; i < _size - 1; ++i) {
         new (&_data[i]) T(std::move(_data[i + 1]));
+        _data[i + 1].~T();
     }
     _size--;
 }
@@ -195,6 +213,7 @@ void MyDynamicArray<T>::upsize() {
     T* new_data = (T*)malloc(sizeof(T) * new_capacity);
     for (size_t i = 0; i < _size; i++) {
         new (&new_data[i]) T(std::move(_data[i]));
+        _data[i].~T();
     }
     if (_data) free(_data);
     _data = new_data;
